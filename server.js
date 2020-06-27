@@ -1,30 +1,33 @@
 const express = require('express');
-const path = require('path');
 const socket = require('socket.io');
+const cors = require('cors');
+
+let tasks = [
+  { id: 1, name: 'For example' }, 
+  { id: 2, name: 'Go out with a dog' }
+];
 
 const app = express();
-let tasks = [];
-
-app.use(express.static(path.join(__dirname, '/client')));
+app.use(cors());
 
 const server = app.listen(process.env.PORT || 8000, () => {
   console.log('Server is running...');
 });
 
-app.use((req, res) => {
-  res.status(404).send({ message: 'Not found...' });
-});
-
 const io = socket(server);
 
-io.on('connection', () => {
+io.on('connection', (socket) => {
   socket.emit('updateData', tasks);
   socket.on('addTask', (newTask) => {
     tasks.push(newTask);
     socket.broadcast.emit('addTask', newTask);
   });
-  socket.on('removeTask', (taskId) => {
-    tasks.splice(taskId);
-    socket.broadcast.emit('removeTask', taskId);
+  socket.on('removeTask', (removedTask) => {
+    tasks.filter(task => {return task.id != removedTask.id})
+    socket.broadcast.emit('removeTask', removedTask);
   });
-}); 
+});
+
+app.use((req, res) => {
+  res.status(404).json({ message: 'Not found...' });
+});
